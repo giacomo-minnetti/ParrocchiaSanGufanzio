@@ -91,7 +91,7 @@
                 stopBtn.disabled = false;
                 await loadList();
                 scanLoop();
-                scanInterval = setInterval(loadList, 10_000);
+                scanInterval = setInterval(loadList, 60_000);
             } catch (err) {
                 statusEl.textContent = 'Stato: errore accesso fotocamera';
                 console.error(err);
