@@ -1,147 +1,234 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Genera QR - Parrocchia</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parrocchia San Gufanzio</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
     <style>
-        :root{--bg:#f4f6fb;--card:#fff;--accent:#2b6df6;--muted:#6b7280}
-        html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#111}
-        .container{max-width:420px;margin:40px auto;padding:16px}
-        .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
-        input{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px}
-        .primary{background:var(--accent);color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer}
-        .secondary{background:#f3f4f6;border:none;padding:8px;border-radius:6px;cursor:pointer}
-        #qrPreview{display:none;margin-top:12px;align-items:center;flex-direction:column}
-        #qrImage{width:180px;height:180px;border-radius:8px;background:#fff;display:block;margin:0 auto 8px}
-        #qrToken{margin-top:8px;font-size:12px;word-break:break-all;color:#374151;cursor:pointer}
-        .muted{color:var(--muted);font-size:13px}
-        .row{display:flex;gap:8px}
-        .row button{flex:1}
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .app {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .HomeMenu {
+            padding: 16px;
+            background: var(--card);
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .brand h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.02);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 14px;
+        }
+        input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: var(--radius);
+            font-size: 16px;
+            background: var(--card);
+            color: var(--text);
+            transition: background var(--transition);
+        }
+        input[type="email"]:focus, input[type="password"]:focus {
+            outline: none;
+            background: rgba(255,255,255,0.06);
+            border-color: var(--accent);
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #code-display {
+            display: none;
+            margin-top: 20px;
+            padding: 16px;
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.02);
+            border-radius: var(--radius);
+        }
+        #code-value {
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            color: var(--accent-2);
+        }
+        #qr-code {
+            text-align: center;
+            margin: 15px 0;
+        }
+        @media (max-width: 600px) {
+            .app {
+                height: 100vh;
+            }
+            .main {
+                padding: 12px;
+            }
+            .card {
+                padding: 14px;
+            }
+            input[type="email"], input[type="password"] {
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card">
-            <h3 style="margin:0 0 8px 0">Genera QR di accesso</h3>
-            <form id="qrForm" style="display:flex;flex-direction:column;gap:8px">
-                <input id="qrEmail" type="email" placeholder="Email" required />
-                <input id="qrPass" type="password" placeholder="Password" required />
-                <div class="row">
-                    <button type="submit" class="primary">Genera</button>
-                    <button type="button" id="qrClear" class="secondary">Pulisci</button>
-                </div>
-            </form>
-
-            <div id="qrPreview">
-                <img id="qrImage" alt="QR code" />
-                <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-                    <div class="muted">Valido per:</div>
-                    <div id="qrTimer" style="font-weight:700">--:--</div>
-                </div>
-                <div id="qrToken"></div>
+    <div class="app">
+        <aside class="HomeMenu">
+            <div class="brand">
+                <div class="logo"></div>
+                <h1>San Gufanzio</h1>
             </div>
-        </div>
+        </aside>
+        
+        <main class="main">
+            <div class="header">
+                <h2>Parrocchia San Gufanzio</h2>
+            </div>
+            
+            <div class="card">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" placeholder="Inserisci la tua email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Inserisci la tua password">
+                </div>
+                <button class="btn" onclick="generateCode()">Genera Codice</button>
+                
+                <div id="code-display">
+                    <h3 style="margin:0 0 12px 0; color:var(--text); font-size:16px;">Codice Generato:</h3>
+                    <div id="code-value"></div>
+                    <div id="qr-code"></div>
+                    <button id="wallet-btn" class="btn" onclick="addToWallet()">Aggiungi a Wallet</button>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script>
-        async function sha256Hex(str) {
-            const buf = new TextEncoder().encode(str);
-            const hash = await crypto.subtle.digest('SHA-256', buf);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+        async function generateHash(email, password) {
+            const combined = email + password;
+            const encoder = new TextEncoder();
+            const data = encoder.encode(combined);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
         }
 
-        (function(){
-            const form = document.getElementById('qrForm');
-            const emailInput = document.getElementById('qrEmail');
-            const passInput = document.getElementById('qrPass');
-            const preview = document.getElementById('qrPreview');
-            const qrImage = document.getElementById('qrImage');
-            const qrTimer = document.getElementById('qrTimer');
-            const qrTokenEl = document.getElementById('qrToken');
-            const clearBtn = document.getElementById('qrClear');
-            let countdownInterval = null;
-
-            function startCountdown(expiresAt) {
-                clearInterval(countdownInterval);
-                function update() {
-                    const now = Date.now();
-                    const diff = Math.max(0, expiresAt - now);
-                    const s = Math.ceil(diff / 1000);
-                    const mm = String(Math.floor(s / 60)).padStart(2,'0');
-                    const ss = String(s % 60).padStart(2,'0');
-                    qrTimer.textContent = `${mm}:${ss}`;
-                    if (diff <= 0) clearInterval(countdownInterval);
+        async function generateFinalToken(firstHash) {
+            try {
+                const r = await fetch('/generate_token', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({firstHash})
+                });
+                if (r.ok) {
+                    const j = await r.json();
+                    return j.token || firstHash;
                 }
-                update();
-                countdownInterval = setInterval(update, 500);
+            } catch(e) {}
+            return firstHash;
+        }
+
+        async function generateCode() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                alert('Inserisci email e password');
+                return;
             }
+            
+            const hash = await generateHash(email, password);
+            const token = await generateFinalToken(hash);
+            
+            document.getElementById('code-value').textContent = token;
+            
+            const qrContainer = document.getElementById('qr-code');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: token,
+                width: 200,
+                height: 200
+            });
+            
+            document.getElementById('code-display').style.display = 'block';
+            updateWalletButton();
+        }
 
-            async function generateFinalToken(firstHash) {
-                try {
-                    const r = await fetch('/generate_token', {
-                        method: 'POST',
-                        headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({firstHash})
-                    });
-                    if (r.ok) {
-                        const j = await r.json();
-                        let expiresAt = null;
-                        if (j.expires_at) {
-                            expiresAt = isNaN(Date.parse(j.expires_at)) ? Number(j.expires_at) : Date.parse(j.expires_at);
-                        } else if (j.ttl_seconds) {
-                            expiresAt = Date.now() + (j.ttl_seconds * 1000);
-                        } else {
-                            expiresAt = Date.now() + 60_000;
-                        }
-                        return { token: j.token, expiresAt };
-                    }
-                } catch(e){}
-                const now = new Date();
-                const timestring = now.toISOString();
-                const finalHash = await sha256Hex(firstHash + '|' + timestring);
-                return { token: finalHash, expiresAt: Date.now() + 60_000 };
+        function updateWalletButton() {
+            const btn = document.getElementById('wallet-btn');
+            const isApple = /iPhone|iPad|iPod|Mac/.test(navigator.userAgent);
+            btn.textContent = isApple ? 'Aggiungi ad Apple Wallet' : 'Aggiungi a Google Wallet';
+        }
+
+        function addToWallet() {
+            const code = document.getElementById('code-value').textContent;
+            const isApple = /iPhone|iPad|iPod|Mac/.test(navigator.userAgent);
+            
+            if (isApple) {
+                window.location.href = `https://wallet.apple.com/pass/${code}`;
+            } else {
+                window.location.href = `https://pay.google.com/gp/v/save/${code}`;
             }
-
-            async function renderQR(text) {
-                try {
-                    const dataUrl = await QRCode.toDataURL(text, { margin:1, width:512 });
-                    qrImage.src = dataUrl;
-                } catch(e) {
-                    qrImage.alt = 'Errore generazione QR';
-                    console.error(e);
-                }
-            }
-
-            form.addEventListener('submit', async (ev) => {
-                ev.preventDefault();
-                const email = emailInput.value.trim().toLowerCase();
-                const pass = passInput.value;
-                if (!email || !pass) return;
-                const firstHash = await sha256Hex(`${email}:${pass}`);
-                const { token, expiresAt } = await generateFinalToken(firstHash);
-                preview.style.display = 'flex';
-                qrTokenEl.textContent = token;
-                startCountdown(expiresAt);
-                await renderQR(token);
-            });
-
-            clearBtn.addEventListener('click', () => {
-                emailInput.value = '';
-                passInput.value = '';
-                preview.style.display = 'none';
-                qrImage.src = '';
-                qrTokenEl.textContent = '';
-                clearInterval(countdownInterval);
-                qrTimer.textContent = '--:--';
-            });
-
-            qrTokenEl.addEventListener('click', () => {
-                if (!qrTokenEl.textContent) return;
-                navigator.clipboard?.writeText(qrTokenEl.textContent).catch(()=>{});
-            });
-        })();
+        }
     </script>
 </body>
 </html>

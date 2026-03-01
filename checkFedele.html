@@ -2,183 +2,235 @@
 <html lang="it">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Controllo QR - Parrocchia</title>
     <style>
-        :root{--bg:#f4f6fb;--card:#fff;--accent:#2b6df6;--muted:#6b7280}
-        html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#111}
-        .container{max-width:420px;margin:40px auto;padding:16px}
-        .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
-        input{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px}
-        .primary{background:var(--accent);color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer}
-        .secondary{background:#f3f4f6;border:none;padding:8px;border-radius:6px;cursor:pointer}
-        #video{width:100%;height:auto;border-radius:8px;display:block;background:#000}
+        :root{
+            --bg: #0f1724;
+            --bg-2: linear-gradient(135deg,#071028 0%,#11243a 100%);
+            --card: rgba(255,255,255,0.03);
+            --glass: rgba(255,255,255,0.06);
+            --accent: #4f46e5;
+            --text: #e6eef8;
+            --muted: #9fb0c8;
+            --radius: 12px;
+            --shadow: 0 6px 18px rgba(3,7,18,0.6);
+            --transition: 200ms cubic-bezier(.2,.8,.2,1);
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;overflow:hidden}
+        body{
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
+            background: var(--bg-2);
+            color:var(--text);
+            padding:16px;
+            -webkit-font-smoothing:antialiased;
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+        }
+        .container{
+            max-width:100%;
+            width:100%;
+            display:flex;
+            flex-direction:column;
+            gap:16px;
+        }
+        .card{
+            background:var(--card);
+            border-radius:var(--radius);
+            padding:20px;
+            box-shadow:var(--shadow);
+            border:1px solid rgba(255,255,255,0.02);
+            backdrop-filter:blur(6px);
+        }
+        .card h3{margin:0 0 16px 0;font-size:18px;color:var(--text);text-align:center}
+        #video{
+            width:100%;
+            height:auto;
+            aspect-ratio:3/4;
+            border-radius:10px;
+            display:block;
+            background:#000;
+            object-fit:cover;
+        }
         #canvas{display:none}
-        .muted{color:var(--muted);font-size:13px}
-        .row{display:flex;gap:8px}
-        .row button{flex:1}
-        #status{font-weight:700;margin-top:8px}
-        #result{margin-top:10px;padding:10px;border-radius:8px;background:transparent;color:inherit}
-        .ok-color{background: rgba(16,185,129,0.08); color:#10b981}
-        .no-color{background: rgba(239,68,68,0.08); color:#ef4444}
-        #controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+        .buttons{
+            display:flex;
+            gap:12px;
+            justify-content:center;
+            margin-top:16px;
+        }
+        button{
+            padding:12px 24px;
+            border:none;
+            border-radius:8px;
+            font-size:16px;
+            font-weight:600;
+            cursor:pointer;
+            transition:all var(--transition);
+            background:var(--accent);
+            color:#fff;
+        }
+        button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(79,70,229,0.4)}
+        button:active{transform:translateY(0)}
+        .modal{
+            display:none;
+            position:fixed;
+            top:0;
+            left:0;
+            right:0;
+            bottom:0;
+            background:rgba(0,0,0,0.7);
+            backdrop-filter:blur(4px);
+            z-index:1000;
+            justify-content:center;
+            align-items:center;
+            animation:fadeIn var(--transition);
+        }
+        .modal.show{display:flex}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .modal-content{
+            background:var(--card);
+            border-radius:var(--radius);
+            padding:32px;
+            box-shadow:var(--shadow);
+            border:1px solid rgba(255,255,255,0.02);
+            backdrop-filter:blur(6px);
+            max-width:400px;
+            text-align:center;
+            animation:slideUp var(--transition);
+        }
+        @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+        .modal-content h2{margin:0 0 16px 0;font-size:24px}
+        .modal-content .icon{font-size:48px;margin-bottom:16px}
+        .modal-content p{margin:16px 0;font-size:16px;color:var(--muted)}
+        .modal-content button{width:100%;margin-top:24px}
+        .success-text{color:#6ee7b7}
+        .error-text{color:#fca5a5}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h3 style="margin:0 0 8px 0">Controllo Fedele (QR)</h3>
-
-            <input id="searchInput" placeholder="Cerca codice o premi Enter per inserimento manuale" />
-
-            <div id="previewArea" style="margin-top:10px">
-                <video id="video" playsinline></video>
-                <canvas id="canvas"></canvas>
+            <h3>Controllo Fedele</h3>
+            <video id="video" playsinline></video>
+            <canvas id="canvas"></canvas>
+            <div class="buttons">
+                <button onclick="startCameraHandler()">▶ Avvia</button>
+                <button onclick="stopCamera()">⏹ Ferma</button>
+                <button onclick="resetResult()">↻ Azzera</button>
             </div>
-
-            <div id="controls">
-                <button id="startBtn" class="primary">Avvia scansione</button>
-                <button id="stopBtn" class="secondary" disabled>Ferma</button>
-                <button id="manualBtn" class="secondary">Inserimento manuale</button>
-            </div>
-
-            <div id="status" class="muted">Stato: inattivo</div>
-            <div id="result" class="muted">Nessun risultato</div>
-
-            <div style="margin-top:12px" class="muted">Il file "fidelilist.txt" deve trovarsi nella stessa cartella dell'app. Lista aggiornata ogni 10s.</div>
         </div>
     </div>
 
-    <!-- jsQR -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div id="modalIcon" class="icon"></div>
+            <h2 id="modalTitle"></h2>
+            <p id="modalMessage"></p>
+            <button onclick="closeModal()">Chiudi</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script>
-        const LIST_FILE = 'fidelilist.txt';
-
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const statusEl = document.getElementById('status');
-        const resultEl = document.getElementById('result');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const manualBtn = document.getElementById('manualBtn');
-        const searchInput = document.getElementById('searchInput');
-
-        let stream = null;
+        const modal = document.getElementById('modal');
+        const modalIcon = document.getElementById('modalIcon');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        let validCodes = [];
+        let lastScanned = '';
         let scanning = false;
-        let scanInterval = null;
-        let knownList = [];
 
-        async function loadList() {
+        async function loadValidCodes() {
             try {
-                const r = await fetch(LIST_FILE, {cache: "no-store"});
-                if (!r.ok) { knownList = []; console.warn('Impossibile caricare', LIST_FILE); return; }
-                const txt = await r.text();
-                knownList = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-            } catch(e) { knownList = []; }
+                const response = await fetch('dati.txt');
+                const text = await response.text();
+                validCodes = text.split('\n').map(line => line.trim()).filter(line => line);
+            } catch (err) {
+                showModal('Errore', 'Errore caricamento file', '✗', false);
+                console.error(err);
+            }
+        }
+
+        async function startCameraHandler() {
+            if (!scanning) {
+                await startCamera();
+            }
         }
 
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } , audio: false});
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                 video.srcObject = stream;
                 await video.play();
                 canvas.width = video.videoWidth || 640;
                 canvas.height = video.videoHeight || 480;
                 scanning = true;
-                statusEl.textContent = 'Stato: in scansione...';
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                await loadList();
                 scanLoop();
-                scanInterval = setInterval(loadList, 60_000);
             } catch (err) {
-                statusEl.textContent = 'Stato: errore accesso fotocamera';
+                showModal('Errore', 'Errore accesso fotocamera', '✗', false);
                 console.error(err);
             }
         }
 
         function stopCamera() {
             scanning = false;
-            clearInterval(scanInterval);
-            if (stream) { stream.getTracks().forEach(t=>t.stop()); stream = null; }
-            video.pause();
-            video.srcObject = null;
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            statusEl.textContent = 'Stato: fermo';
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function resetResult() {
+            lastScanned = '';
+            modal.classList.remove('show');
         }
 
         function scanLoop() {
             if (!scanning) return;
+            
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
-                if (code && code.data) {
-                    handleScanned(code.data.trim());
+                if (code && code.data && code.data !== lastScanned) {
+                    lastScanned = code.data;
+                    checkCode(code.data);
                 }
             }
             requestAnimationFrame(scanLoop);
         }
 
-        let lastHandled = '';
-        let cooldown = false;
-        async function handleScanned(data) {
-            if (cooldown && data === lastHandled) return;
-            lastHandled = data;
-            cooldown = true;
-            await loadList(); // ensure fresh comparison for manual calls too
-            const found = knownList.includes(data);
-            resultEl.className = 'card';
-            resultEl.classList.remove('muted','ok-color','no-color');
-            if (found) {
-                resultEl.classList.add('ok-color');
-                resultEl.textContent = `Fedele presente: ${data}`;
+        function checkCode(data) {
+            if (validCodes.includes(data)) {
+                showModal('Fedele Riconosciuto', `Codice: ${data}`, '✓', true);
             } else {
-                resultEl.classList.add('no-color');
-                resultEl.textContent = `NON presente: ${data}`;
+                showModal('Fedele Non Valido', `Codice: ${data}`, '✗', false);
             }
-            statusEl.textContent = 'Stato: risultato';
-            setTimeout(()=>{ cooldown = false; statusEl.textContent = scanning ? 'Stato: in scansione...' : 'Stato: fermo'; }, 1500);
         }
 
-        startBtn.addEventListener('click', startCamera);
-        stopBtn.addEventListener('click', stopCamera);
+        function showModal(title, message, icon, isSuccess) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalIcon.textContent = icon;
+            modalIcon.className = 'icon ' + (isSuccess ? 'success-text' : 'error-text');
+            modal.classList.add('show');
+        }
 
-        manualBtn.addEventListener('click', async () => {
-            const manual = prompt('Inserisci codice manuale:');
-            if (manual) { await loadList(); handleScanned(manual.trim()); }
-        });
+        function closeModal() {
+            modal.classList.remove('show');
+            lastScanned = '';
+        }
 
-        searchInput.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                const val = e.target.value.trim();
-                if (!val) {
-                    // when empty, fall back to manual prompt if not scanning
-                    if (!scanning) {
-                        const manual = prompt('Inserisci codice manuale:');
-                        if (manual) { await loadList(); handleScanned(manual.trim()); }
-                    }
-                    return;
-                }
-                await loadList();
-                handleScanned(val);
-            }
-        });
-
-        // compatibility: Enter anywhere when not scanning triggers manual input
-        document.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter' && !scanning && document.activeElement !== searchInput) {
-                const manual = prompt('Inserisci codice manuale:');
-                if (manual) { await loadList(); handleScanned(manual.trim()); }
-            }
-        });
-
-        // cleanup on page unload
-        window.addEventListener('beforeunload', () => { stopCamera(); });
+        loadValidCodes();
     </script>
 </body>
 </html>
