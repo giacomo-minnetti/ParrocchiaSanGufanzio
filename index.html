@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Genera QR - Parrocchia</title>
+    <style>
+        :root{--bg:#f4f6fb;--card:#fff;--accent:#2b6df6;--muted:#6b7280}
+        html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#111}
+        .container{max-width:420px;margin:40px auto;padding:16px}
+        .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+        input{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px}
+        .primary{background:var(--accent);color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer}
+        .secondary{background:#f3f4f6;border:none;padding:8px;border-radius:6px;cursor:pointer}
+        #qrPreview{display:none;margin-top:12px;align-items:center;flex-direction:column}
+        #qrImage{width:180px;height:180px;border-radius:8px;background:#fff;display:block;margin:0 auto 8px}
+        #qrToken{margin-top:8px;font-size:12px;word-break:break-all;color:#374151;cursor:pointer}
+        .muted{color:var(--muted);font-size:13px}
+        .row{display:flex;gap:8px}
+        .row button{flex:1}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h3 style="margin:0 0 8px 0">Genera QR di accesso</h3>
+            <form id="qrForm" style="display:flex;flex-direction:column;gap:8px">
+                <input id="qrEmail" type="email" placeholder="Email" required />
+                <input id="qrPass" type="password" placeholder="Password" required />
+                <div class="row">
+                    <button type="submit" class="primary">Genera</button>
+                    <button type="button" id="qrClear" class="secondary">Pulisci</button>
+                </div>
+            </form>
+
+            <div id="qrPreview">
+                <img id="qrImage" alt="QR code" />
+                <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+                    <div class="muted">Valido per:</div>
+                    <div id="qrTimer" style="font-weight:700">--:--</div>
+                </div>
+                <div id="qrToken"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script>
+        async function sha256Hex(str) {
+            const buf = new TextEncoder().encode(str);
+            const hash = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+        }
+
+        (function(){
+            const form = document.getElementById('qrForm');
+            const emailInput = document.getElementById('qrEmail');
+            const passInput = document.getElementById('qrPass');
+            const preview = document.getElementById('qrPreview');
+            const qrImage = document.getElementById('qrImage');
+            const qrTimer = document.getElementById('qrTimer');
+            const qrTokenEl = document.getElementById('qrToken');
+            const clearBtn = document.getElementById('qrClear');
+            let countdownInterval = null;
+
+            function startCountdown(expiresAt) {
+                clearInterval(countdownInterval);
+                function update() {
+                    const now = Date.now();
+                    const diff = Math.max(0, expiresAt - now);
+                    const s = Math.ceil(diff / 1000);
+                    const mm = String(Math.floor(s / 60)).padStart(2,'0');
+                    const ss = String(s % 60).padStart(2,'0');
+                    qrTimer.textContent = `${mm}:${ss}`;
+                    if (diff <= 0) clearInterval(countdownInterval);
+                }
+                update();
+                countdownInterval = setInterval(update, 500);
+            }
+
+            async function generateFinalToken(firstHash) {
+                try {
+                    const r = await fetch('/generate_token', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({firstHash})
+                    });
+                    if (r.ok) {
+                        const j = await r.json();
+                        let expiresAt = null;
+                        if (j.expires_at) {
+                            expiresAt = isNaN(Date.parse(j.expires_at)) ? Number(j.expires_at) : Date.parse(j.expires_at);
+                        } else if (j.ttl_seconds) {
+                            expiresAt = Date.now() + (j.ttl_seconds * 1000);
+                        } else {
+                            expiresAt = Date.now() + 60_000;
+                        }
+                        return { token: j.token, expiresAt };
+                    }
+                } catch(e){}
+                const now = new Date();
+                const timestring = now.toISOString();
+                const finalHash = await sha256Hex(firstHash + '|' + timestring);
+                return { token: finalHash, expiresAt: Date.now() + 60_000 };
+            }
+
+            async function renderQR(text) {
+                try {
+                    const dataUrl = await QRCode.toDataURL(text, { margin:1, width:512 });
+                    qrImage.src = dataUrl;
+                } catch(e) {
+                    qrImage.alt = 'Errore generazione QR';
+                    console.error(e);
+                }
+            }
+
+            form.addEventListener('submit', async (ev) => {
+                ev.preventDefault();
+                const email = emailInput.value.trim().toLowerCase();
+                const pass = passInput.value;
+                if (!email || !pass) return;
+                const firstHash = await sha256Hex(`${email}:${pass}`);
+                const { token, expiresAt } = await generateFinalToken(firstHash);
+                preview.style.display = 'flex';
+                qrTokenEl.textContent = token;
+                startCountdown(expiresAt);
+                await renderQR(token);
+            });
+
+            clearBtn.addEventListener('click', () => {
+                emailInput.value = '';
+                passInput.value = '';
+                preview.style.display = 'none';
+                qrImage.src = '';
+                qrTokenEl.textContent = '';
+                clearInterval(countdownInterval);
+                qrTimer.textContent = '--:--';
+            });
+
+            qrTokenEl.addEventListener('click', () => {
+                if (!qrTokenEl.textContent) return;
+                navigator.clipboard?.writeText(qrTokenEl.textContent).catch(()=>{});
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+/* Modern app UI for /home/jackson/Documenti/Cavolate/ParrocchiaSanGufanzio/style.css */
+
+/* Theme variables */
+:root{
+    --bg: #0f1724;         /* deep navy */
+    --bg-2: linear-gradient(135deg,#071028 0%,#11243a 100%);
+    --card: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.06);
+    --accent: #4f46e5;     /* indigo */
+    --accent-2: #06b6d4;   /* teal */
+    --text: #e6eef8;
+    --muted: #9fb0c8;
+    --radius: 12px;
+    --shadow: 0 6px 18px rgba(3,7,18,0.6);
+    --transition: 200ms cubic-bezier(.2,.8,.2,1);
+}
+
+/* Base */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+    margin:0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: var(--bg-2);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    line-height:1.45;
+    padding:24px;
+}
+
+/* App layout */
+.app{
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+    max-width:1200px;
+    margin:0 auto;
+}
+
+/* Left navigation / preserved .HomeMenu class */
+.HomeMenu{
+    width:260px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+    border-radius: var(--radius);
+    padding:20px;
+    box-shadow:var(--shadow);
+    backdrop-filter: blur(6px);
+    border:1px solid rgba(255,255,255,0.03);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    flex-shrink:0;
+    transition:transform var(--transition), box-shadow var(--transition);
+}
+
+/* Logo / title */
+.HomeMenu .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:6px;
+}
+.HomeMenu .brand .logo{
+    width:44px;
+    height:44px;
+    border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    box-shadow:0 6px 18px rgba(79,70,229,0.18);
+}
+.HomeMenu .brand h1{
+    font-size:16px;
+    margin:0;
+    color:var(--text);
+    letter-spacing:0.2px;
+}
+
+/* Nav items */
+.HomeMenu nav{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.HomeMenu a{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    color:var(--muted);
+    text-decoration:none;
+    border-radius:10px;
+    transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+.HomeMenu a:hover{
+    color:var(--text);
+    background:linear-gradient(90deg, rgba(79,70,229,0.08), rgba(6,182,212,0.04));
+    transform:translateY(-2px);
+}
+
+/* Active nav */
+.HomeMenu a.active{
+    color:var(--text);
+    background:linear-gradient(90deg, rgba(79,70,229,0.14), rgba(6,182,212,0.06));
+    box-shadow:0 6px 18px rgba(79,70,229,0.08);
+}
+
+/* Compact helper */
+.HomeMenu .footer{
+    margin-top:auto;
+    font-size:13px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* Main content area */
+.main{
+    flex:1;
+    min-height:480px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+/* Header inside main */
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+}
+.header .search{
+    flex:1;
+    display:flex;
+    background:var(--card);
+    padding:8px;
+    align-items:center;
+    gap:8px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.02);
+}
+.header input{
+    background:transparent;
+    border:0;
+    outline:0;
+    color:var(--text);
+    width:100%;
+    padding:8px;
+    font-size:14px;
+}
+
+/* Cards grid */
+.grid{
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:16px;
+}
+.card{
+    background:var(--card);
+    border-radius:12px;
+    padding:16px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    border:1px solid rgba(255,255,255,0.02);
+    transition:transform var(--transition), box-shadow var(--transition);
+}
+.card:hover{
+    transform:translateY(-6px);
+    box-shadow: 0 18px 48px rgba(2,6,23,0.7);
+}
+.card h2{margin:0 0 8px 0; font-size:16px; color:var(--text)}
+.card p{margin:0; color:var(--muted); font-size:14px}
+
+/* Buttons */
+.btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:10px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:white;
+    border:0;
+    cursor:pointer;
+    box-shadow:0 8px 28px rgba(79,70,229,0.18);
+    transition:transform var(--transition), opacity var(--transition);
+}
+.btn.secondary{
+    background:transparent;
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.04);
+}
+.btn:active{transform:translateY(1px)}
+
+/* Small helpers */
+.kv{font-weight:600; color:var(--text)}
+.muted{color:var(--muted); font-size:13px}
+
+/* Responsive */
+@media (max-width:1000px){
+    .grid{grid-template-columns: repeat(2,1fr)}
+    .HomeMenu{width:220px}
+}
+@media (max-width:700px){
+    body{padding:16px}
+    .app{flex-direction:column}
+    .HomeMenu{width:100%; display:flex; flex-direction:row; gap:10px; padding:10px; align-items:center; overflow:auto}
+    .main{width:100%}
+    .grid{grid-template-columns:1fr}
+    .header{flex-direction:column; align-items:stretch}
+}

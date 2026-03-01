@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Controllo QR - Parrocchia</title>
+    <style>
+        :root{--bg:#f4f6fb;--card:#fff;--accent:#2b6df6;--muted:#6b7280}
+        html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#111}
+        .container{max-width:420px;margin:40px auto;padding:16px}
+        .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+        input{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px}
+        .primary{background:var(--accent);color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer}
+        .secondary{background:#f3f4f6;border:none;padding:8px;border-radius:6px;cursor:pointer}
+        #video{width:100%;height:auto;border-radius:8px;display:block;background:#000}
+        #canvas{display:none}
+        .muted{color:var(--muted);font-size:13px}
+        .row{display:flex;gap:8px}
+        .row button{flex:1}
+        #status{font-weight:700;margin-top:8px}
+        #result{margin-top:10px;padding:10px;border-radius:8px;background:transparent;color:inherit}
+        .ok-color{background: rgba(16,185,129,0.08); color:#10b981}
+        .no-color{background: rgba(239,68,68,0.08); color:#ef4444}
+        #controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h3 style="margin:0 0 8px 0">Controllo Fedele (QR)</h3>
+
+            <input id="searchInput" placeholder="Cerca codice o premi Enter per inserimento manuale" />
+
+            <div id="previewArea" style="margin-top:10px">
+                <video id="video" playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div id="controls">
+                <button id="startBtn" class="primary">Avvia scansione</button>
+                <button id="stopBtn" class="secondary" disabled>Ferma</button>
+                <button id="manualBtn" class="secondary">Inserimento manuale</button>
+            </div>
+
+            <div id="status" class="muted">Stato: inattivo</div>
+            <div id="result" class="muted">Nessun risultato</div>
+
+            <div style="margin-top:12px" class="muted">Il file "fidelilist.txt" deve trovarsi nella stessa cartella dell'app. Lista aggiornata ogni 10s.</div>
+        </div>
+    </div>
+
+    <!-- jsQR -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script>
+        const LIST_FILE = 'fidelilist.txt';
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const resultEl = document.getElementById('result');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const manualBtn = document.getElementById('manualBtn');
+        const searchInput = document.getElementById('searchInput');
+
+        let stream = null;
+        let scanning = false;
+        let scanInterval = null;
+        let knownList = [];
+
+        async function loadList() {
+            try {
+                const r = await fetch(LIST_FILE, {cache: "no-store"});
+                if (!r.ok) { knownList = []; console.warn('Impossibile caricare', LIST_FILE); return; }
+                const txt = await r.text();
+                knownList = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+            } catch(e) { knownList = []; }
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } , audio: false});
+                video.srcObject = stream;
+                await video.play();
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                scanning = true;
+                statusEl.textContent = 'Stato: in scansione...';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                await loadList();
+                scanLoop();
+                scanInterval = setInterval(loadList, 10_000);
+            } catch (err) {
+                statusEl.textContent = 'Stato: errore accesso fotocamera';
+                console.error(err);
+            }
+        }
+
+        function stopCamera() {
+            scanning = false;
+            clearInterval(scanInterval);
+            if (stream) { stream.getTracks().forEach(t=>t.stop()); stream = null; }
+            video.pause();
+            video.srcObject = null;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            statusEl.textContent = 'Stato: fermo';
+        }
+
+        function scanLoop() {
+            if (!scanning) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+                if (code && code.data) {
+                    handleScanned(code.data.trim());
+                }
+            }
+            requestAnimationFrame(scanLoop);
+        }
+
+        let lastHandled = '';
+        let cooldown = false;
+        async function handleScanned(data) {
+            if (cooldown && data === lastHandled) return;
+            lastHandled = data;
+            cooldown = true;
+            await loadList(); // ensure fresh comparison for manual calls too
+            const found = knownList.includes(data);
+            resultEl.className = 'card';
+            resultEl.classList.remove('muted','ok-color','no-color');
+            if (found) {
+                resultEl.classList.add('ok-color');
+                resultEl.textContent = `Fedele presente: ${data}`;
+            } else {
+                resultEl.classList.add('no-color');
+                resultEl.textContent = `NON presente: ${data}`;
+            }
+            statusEl.textContent = 'Stato: risultato';
+            setTimeout(()=>{ cooldown = false; statusEl.textContent = scanning ? 'Stato: in scansione...' : 'Stato: fermo'; }, 1500);
+        }
+
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+
+        manualBtn.addEventListener('click', async () => {
+            const manual = prompt('Inserisci codice manuale:');
+            if (manual) { await loadList(); handleScanned(manual.trim()); }
+        });
+
+        searchInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                const val = e.target.value.trim();
+                if (!val) {
+                    // when empty, fall back to manual prompt if not scanning
+                    if (!scanning) {
+                        const manual = prompt('Inserisci codice manuale:');
+                        if (manual) { await loadList(); handleScanned(manual.trim()); }
+                    }
+                    return;
+                }
+                await loadList();
+                handleScanned(val);
+            }
+        });
+
+        // compatibility: Enter anywhere when not scanning triggers manual input
+        document.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter' && !scanning && document.activeElement !== searchInput) {
+                const manual = prompt('Inserisci codice manuale:');
+                if (manual) { await loadList(); handleScanned(manual.trim()); }
+            }
+        });
+
+        // cleanup on page unload
+        window.addEventListener('beforeunload', () => { stopCamera(); });
+    </script>
+</body>
+</html>
